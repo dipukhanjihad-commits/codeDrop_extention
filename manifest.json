@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "CodeDrop",
+  "version": "1.0.0",
+  "description": "Search project files, copy content, and paste filename+content to download.",
+  "permissions": ["sidePanel", "downloads", "clipboardRead", "clipboardWrite"],
+  "action": { "default_title": "Open CodeDrop" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "background": { "service_worker": "background.js" }
+}

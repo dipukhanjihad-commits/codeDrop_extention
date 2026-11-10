@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CodeDrop</title>
+<script src="theme-init.js"></script>
+<style>
+  :root {
+    --bg: #ffffff; --bg-secondary: #f7f8fa; --bg-tertiary: #eef0f3;
+    --text: #1a1d21; --text-secondary: #5a6068; --text-tertiary: #8a9098;
+    --border: #e1e4e8; --border-strong: #c8ced6;
+    --accent: #2563eb; --accent-hover: #1d4ed8; --accent-bg: #eff5ff;
+    --success: #059669; --danger: #dc2626;
+    --hover-bg: #eef6ff; --selected-bg: #dbeafe;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  html[data-theme="dark"] {
+    --bg: #0f1115; --bg-secondary: #171a20; --bg-tertiary: #1e2229;
+    --text: #e6e8eb; --text-secondary: #a8b0ba; --text-tertiary: #6b7280;
+    --border: #262b33; --border-strong: #3a4250;
+    --accent: #3b82f6; --accent-hover: #60a5fa; --accent-bg: #1e3a5f;
+    --success: #10b981; --danger: #ef4444;
+    --hover-bg: #1e2833; --selected-bg: #1e3a5f;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    margin: 0; display: flex; flex-direction: column;
+    font-size: 13px; background: var(--bg); color: var(--text);
+    transition: background 0.15s, color 0.15s;
+  }
+  header {
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: center;
+    background: var(--bg-secondary); flex-shrink: 0;
+  }
+  .btn {
+    padding: 6px 12px; border: 1px solid var(--border-strong);
+    background: var(--bg); color: var(--text); border-radius: 6px;
+    cursor: pointer; font-size: 12px; font-weight: 500; font-family: inherit;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    display: inline-flex; align-items: center; gap: 4px;
+    white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) { background: var(--hover-bg); border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+  .btn.icon { padding: 6px 9px; }
+  input[type=text] {
+    padding: 6px 10px; border: 1px solid var(--border-strong);
+    background: var(--bg); color: var(--text); border-radius: 6px;
+    font-size: 12px; font-family: inherit; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input[type=text]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+  .folder-name {
+    font-size: 11px; color: var(--text-secondary); overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0;
+  }
+  .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg-secondary); flex-shrink: 0; }
+  .tab {
+    padding: 10px 14px; cursor: pointer; color: var(--text-secondary);
+    border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.15s;
+    font-size: 12px;
+  }
+  .tab:hover { color: var(--text); background: var(--hover-bg); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab .dot {
+    display: inline-block; width: 6px; height: 6px;
+    background: var(--accent); border-radius: 50%; margin-left: 4px;
+    vertical-align: middle;
+  }
+  .section { padding: 12px; }
+  .tab-content { display: flex; flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }
+
+  /* ---------- Files tab ---------- */
+  #fileList { overflow-y: auto; flex: 1; min-height: 0; }
+  .file-item {
+    padding: 6px 12px; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border); transition: background 0.1s;
+  }
+  .file-item:hover { background: var(--hover-bg); }
+  .file-item.selected { background: var(--selected-bg); }
+  .file-path {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 12px; font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  }
+  .file-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .file-actions .btn { padding: 3px 8px; font-size: 11px; }
+
+  /* ---------- Detail tab ---------- */
+  .detail-path {
+    font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+    font-size: 12px; font-weight: 600;
+    padding: 8px 10px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .detail-path.empty { color: var(--text-tertiary); font-weight: 400; font-style: italic; }
+  #detailContent {
+    width: 100%; flex: 1; min-height: 120px;
+    font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+    font-size: 12px; line-height: 1.55;
+    resize: none; padding: 10px 12px;
+    border: 1px solid var(--border-strong); border-radius: 6px;
+    background: var(--bg-secondary); color: var(--text);
+  }
+  #detailContent:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+  .detail-meta {
+    font-size: 11px; color: var(--text-secondary);
+    display: flex; gap: 12px; margin-top: 6px;
+  }
+
+  .status {
+    padding: 8px 12px; font-size: 11px; color: var(--text-secondary);
+    border-top: 1px solid var(--border); background: var(--bg-secondary);
+    flex-shrink: 0; min-height: 30px;
+    display: flex; align-items: center;
+    transition: color 0.15s;
+  }
+  .status.ok { color: var(--success); }
+  .status.err { color: var(--danger); }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .row:last-child { margin-bottom: 0; }
+  .row label { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+  .hidden { display: none !important; }
+
+  /* ---------- mode toggle ---------- */
+  .mode-toggle {
+    display: inline-flex; background: var(--bg-tertiary);
+    border-radius: 8px; padding: 3px; gap: 2px; border: 1px solid var(--border);
+  }
+  .mode-toggle button {
+    padding: 6px 14px; border: none; background: transparent;
+    color: var(--text-secondary); border-radius: 6px; cursor: pointer;
+    font-size: 12px; font-weight: 500; font-family: inherit; transition: all 0.15s;
+  }
+  .mode-toggle button:hover:not(.active) { color: var(--text); }
+  .mode-toggle button.active { background: var(--bg); color: var(--accent); box-shadow: var(--shadow-sm); }
+
+  .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 6px;
+    background: var(--accent); color: #fff; border-radius: 10px;
+    font-size: 10px; font-weight: 700;
+  }
+
+  /* ---------- paste tab ---------- */
+  .content-scroll {
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+    display: flex; flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    position: relative;
+    transition: background 0.15s, outline-color 0.15s;
+    outline: 2px dashed transparent;
+    outline-offset: -4px;
+  }
+  .content-scroll.dragover {
+    background: var(--accent-bg);
+    outline-color: var(--accent);
+    border-radius: 8px;
+  }
+
+  .fill-blocks { display: flex; flex-direction: column; gap: 8px; }
+
+  .empty-state {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-tertiary);
+    font-size: 13px;
+    border: 2px dashed var(--border-strong);
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    min-height: 140px;
+    line-height: 1.6;
+  }
+  .empty-state strong { color: var(--text-secondary); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fill-block {
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg-secondary); padding: 10px;
+    display: flex; flex-direction: column; gap: 6px;
+    animation: slideIn 0.15s ease-out;
+  }
+  .fill-block.collapsed { padding-bottom: 10px; }
+  .fill-block.collapsed .fill-content { display: none; }
+  .fill-block.collapsed .fill-paste { display: none; }
+
+  .fill-header { display: flex; gap: 6px; align-items: center; }
+  .fill-name {
+    flex: 1;
+    font-family: ui-monospace, 'SF Mono', Consolas, monospace !important;
+    font-size: 12px !important;
+  }
+  .fill-content {
+    width: 100%; min-height: 80px;
+    resize: vertical; padding: 8px 10px;
+    border: 1px solid var(--border-strong); border-radius: 6px;
+    background: var(--bg); color: var(--text);
+    font-size: 11px; font-family: ui-monospace, monospace;
+    line-height: 1.5; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .fill-content:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-bg);
+  }
+  .fill-header .btn { padding: 5px 8px; flex-shrink: 0; font-size: 12px; }
+  .fill-toggle { min-width: 26px; justify-content: center; }
+
+  .dest-hint {
+    font-size: 11px; color: var(--text-secondary);
+    text-align: center; margin-bottom: 8px;
+    font-family: ui-monospace, monospace;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 5px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+  code { font-family: ui-monospace, monospace; font-size: 11px; background: var(--bg-tertiary); padding: 1px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+  <header>
+    <button class="btn" id="connectBtn">📁 Connect</button>
+    <button class="btn icon" id="refreshBtn" disabled title="Refresh">⟳</button>
+    <span class="folder-name" id="folderName">Not connected</span>
+    <button class="btn icon" id="themeBtn" title="Toggle light / dark">🌙</button>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="files">📄 Files</div>
+    <div class="tab" data-tab="detail">👁 Detail<span class="dot hidden" id="detailDot"></span></div>
+    <div class="tab" data-tab="paste">⬇ Paste</div>
+  </div>
+
+  <!-- =========================== FILES TAB =========================== -->
+  <div id="tab-files" class="tab-content">
+    <div class="section">
+      <div class="row">
+        <input type="text" id="searchBox" placeholder="Search files or folders..." style="flex:1">
+      </div>
+      <div class="row" style="font-size:11px; color:var(--text-secondary);">
+        <span id="fileCount">0 files</span>
+        <span style="flex:1"></span>
+        <label style="display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" id="excludeNodeModules" checked> skip node_modules/.git
+        </label>
+      </div>
+    </div>
+    <div id="fileList"></div>
+    <div class="status" id="statusFiles">Ready. Click Connect to start.</div>
+  </div>
+
+  <!-- =========================== DETAIL TAB =========================== -->
+  <div id="tab-detail" class="tab-content hidden">
+    <div class="section" style="padding-bottom:0;">
+      <div class="row">
+        <button class="btn" id="backToListBtn">← Back</button>
+        <span style="flex:1"></span>
+        <button class="btn primary" id="copyDetailBtn" disabled>📋 Copy</button>
+      </div>
+      <div class="detail-path empty" id="detailPath">No file selected</div>
+      <div class="detail-meta" id="detailMeta"></div>
+    </div>
+    <div class="section" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+      <textarea id="detailContent" readonly placeholder="Select a file from the Files tab and click View."></textarea>
+    </div>
+    <div class="status" id="statusDetail">No file selected.</div>
+  </div>
+
+  <!-- =========================== PASTE TAB =========================== -->
+  <div id="tab-paste" class="tab-content hidden">
+    <div class="section">
+      <div class="row">
+        <div class="mode-toggle">
+          <button data-mode="single" class="active">Single Files</button>
+          <button data-mode="project">Project</button>
+        </div>
+        <span style="flex:1"></span>
+        <span class="badge hidden" id="parsedCount">0</span>
+      </div>
+      <div class="row hidden" id="projectRow">
+        <label>Project name:</label>
+        <input type="text" id="projectName" placeholder="my-project" style="flex:1">
+      </div>
+      <div class="row">
+        <label>Base folder:</label>
+        <input type="text" id="baseFolder" placeholder="CodeDrop" style="flex:1" title="Folder under Downloads. Slashes allowed (e.g. Projects/Code).">
+      </div>
+      <div class="row">
+        <button class="btn" id="addFillBtn">➕ Add File</button>
+        <button class="btn" id="pasteFromClipboardBtn">📋 Paste</button>
+        <button class="btn" id="clearBtn">🗑 Clear All</button>
+      </div>
+    </div>
+
+    <div class="section" style="padding-top:0; padding-bottom:8px;">
+      <input type="text" id="pasteSearchBox" placeholder="🔍 Filter by filename..." style="width:100%">
+    </div>
+
+    <div class="content-scroll" id="pasteDropArea">
+      <div id="fillBlocks" class="fill-blocks"></div>
+      <div id="emptyState" class="empty-state">
+        <div>No files yet</div>
+        <div style="font-size:11px; margin-top:8px; line-height:1.7;">
+          Click <strong>➕ Add File</strong><br>
+          Drop files here<br>
+          or <strong>📋 Paste</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" style="border-top:1px solid var(--border); padding-top:10px; padding-bottom:10px;">
+      <div class="dest-hint" id="destHint">Destination: Downloads/CodeDrop/&lt;path&gt;</div>
+      <button class="btn primary" id="downloadBtn" style="width:100%; padding:10px;">⬇ Download Files</button>
+    </div>
+    <div class="status" id="status2">Ready. Click "➕ Add File" to add a file.</div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
